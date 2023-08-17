@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 
 import Navbar from "../components/Navbar.jsx";
+import Footer from "../components/Footer";
 
 // import login_img from "./login_img.png";
 
@@ -78,6 +79,7 @@ const Login = () => {
           </div>
         </div>
       </div>
+      <Footer/>
     </>
   );
 };
