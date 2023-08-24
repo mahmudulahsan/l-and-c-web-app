@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar.jsx";
 
 import toast, { Toaster } from "react-hot-toast";
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, addDoc, collection } from "firebase/firestore";
 import Footer from "../components/Footer.jsx";
 import { AuthContext } from "../context/AuthContext";
 import { db } from "../firebase.js";
@@ -52,12 +52,7 @@ const WantLoan = () => {
     e.preventDefault();
     console.log(tempObj);
     const submitWantLoanForm = async () => {
-      //   await updateDoc(doc(db, `users`, currentUser.uid), {
-      //     data: JSON.stringify(tempObj),
-      //   });
-      await setDoc(doc(db, `want_loan`, currentUser.uid), {
-        data: JSON.stringify(tempObj),
-      });
+      await addDoc(collection(db, "requests"), tempObj);
       toast.success("Success!");
     };
     submitWantLoanForm();

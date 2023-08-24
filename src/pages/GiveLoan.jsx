@@ -10,15 +10,17 @@ const GiveLoan = () => {
   const { currentUser } = useContext(AuthContext);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [clickedUid, setClickedUid] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [requesterUid, setRequesterUid] = useState("");
 
   const [interestRate, setInterestRate] = useState("");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
 
   const obj = {
-    requesterUid: clickedUid,
-    offererUid: currentUser.uid,
+    requestId: requestId,
+    requesterUid: requesterUid,
+    uid: currentUser.uid,
     interestRate,
     date,
     note,
@@ -29,19 +31,18 @@ const GiveLoan = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const loansCollection = collection(db, "want_loan");
+      const loansCollection = collection(db, "requests");
       const loansSnapshot = await getDocs(loansCollection);
       const loanData = loansSnapshot.docs.map((doc) => {
-        const obj = doc.data().data;
-        const parsedObj = JSON.parse(obj);
         return {
-          uid: parsedObj.uid,
-          name: parsedObj.name,
-          email: parsedObj.email,
-          phone: parsedObj.phone,
-          studentId: parsedObj.studentId,
-          loanAmount: parsedObj.loanAmount,
-          loanDetails: parsedObj.details,
+          id: doc.id,
+          uid: doc.data().uid,
+          name: doc.data().name,
+          email: doc.data().email,
+          phone: doc.data().phone,
+          studentId: doc.data().studentId,
+          loanAmount: doc.data().loanAmount,
+          loanDetails: doc.data().details,
         };
       });
       //   setLoading(false);
@@ -55,11 +56,8 @@ const GiveLoan = () => {
     e.preventDefault();
     console.log(tempObj);
     const submitWantLoanForm = async () => {
-      await addDoc(collection(db, `users`, clickedUid, `offers`), {
-        data: JSON.stringify(tempObj),
-      });
+      await addDoc(collection(db, `offers`), tempObj);
       toast.success("Success!");
-      // console.log("success");
     };
     submitWantLoanForm();
   };
@@ -124,7 +122,8 @@ const GiveLoan = () => {
                             className="btn"
                             onClick={() => {
                               document.getElementById("my_modal_5").showModal();
-                              setClickedUid(request.uid);
+                              setRequestId(request.id);
+                              setRequesterUid(request.uid);
                             }}
                           >
                             Offer
