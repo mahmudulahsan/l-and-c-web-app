@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import Footer from "../components/Footer";
@@ -8,26 +8,24 @@ import { db } from "../firebase";
 
 const GiveLoan = () => {
   const { currentUser } = useContext(AuthContext);
-  const [resumes, setResumes] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clickedUid, setClickedUid] = useState("");
-
-  //   console.log(clickedUid)
 
   const [interestRate, setInterestRate] = useState("");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
 
   const obj = {
-    uid: clickedUid,
+    requesterUid: clickedUid,
+    offererUid: currentUser.uid,
     interestRate,
     date,
     note,
+    status: "pending",
   };
 
   const tempObj = obj;
-
-  //   console.log("test--------------------", tempObj);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,7 +45,7 @@ const GiveLoan = () => {
         };
       });
       //   setLoading(false);
-      setResumes(loanData);
+      setRequests(loanData);
       setLoading(false);
     };
     fetchData();
@@ -57,7 +55,7 @@ const GiveLoan = () => {
     e.preventDefault();
     console.log(tempObj);
     const submitWantLoanForm = async () => {
-      await setDoc(doc(db, `users`, clickedUid, `requests`, currentUser.uid), {
+      await addDoc(collection(db, `users`, clickedUid, `offers`), {
         data: JSON.stringify(tempObj),
       });
       toast.success("Success!");
@@ -66,7 +64,7 @@ const GiveLoan = () => {
     submitWantLoanForm();
   };
 
-  //   console.log(resumes);
+  //   console.log(requests);
   return (
     <>
       <Navbar />
@@ -92,31 +90,31 @@ const GiveLoan = () => {
             </>
           ) : (
             <div className="mb-52">
-              {resumes.map((resume) => {
+              {requests.map((request) => {
                 return (
                   <>
                     <div className="card p-4 m-4  w-96 glass">
-                      <h2 className="px-6 card-title">{resume.name}</h2>
+                      <h2 className="px-6 card-title">{request.name}</h2>
                       <div className="flex justify-around items-center px-6">
                         <div className="flex flex-col">
                           <div>
-                            {resume.email}
+                            {request.email}
                             <i className="px-2 fa-solid fa-building-columns"></i>
                           </div>
                           <div>
-                            {resume.phone}
+                            {request.phone}
                             <i className="px-2 fa-solid fa-anchor"></i>
                           </div>
                           <div>
-                            {resume.studentId}
+                            {request.studentId}
                             <i className="px-2 fa-solid fa-paperclip"></i>
                           </div>
                           <div>
-                            {resume.loanAmount}
+                            {request.loanAmount}
                             <i className="px-2 fa-solid fa-paperclip"></i>
                           </div>
                           <div>
-                            {resume.loanDetails}
+                            {request.loanDetails}
                             <i className="px-2 fa-solid fa-paperclip"></i>
                           </div>
                         </div>
@@ -125,21 +123,17 @@ const GiveLoan = () => {
                           <button
                             className="btn"
                             onClick={() => {
-                              window.my_modal_5.showModal();
-                              setClickedUid(resume.uid);
+                              document.getElementById("my_modal_5").showModal();
+                              setClickedUid(request.uid);
                             }}
                           >
-                            Request
+                            Offer
                           </button>
                           <dialog
                             id="my_modal_5"
                             className="modal modal-bottom sm:modal-middle"
                           >
-                            <form
-                            //   onSubmit={handleSubmit}
-                              method="dialog"
-                              className="modal-box"
-                            >
+                            <form method="dialog" className="modal-box">
                               <h3 className="font-bold text-lg">
                                 Thanks for showing interest!
                               </h3>
@@ -154,6 +148,10 @@ const GiveLoan = () => {
                                   className="input input-bordered w-full max-w-xs"
                                 />{" "}
                                 %
+                                <br />
+                                <br />
+                                <label htmlFor="date">Return Date</label>
+                                <br />
                                 <input
                                   type="date"
                                   value={date}
@@ -177,7 +175,16 @@ const GiveLoan = () => {
                                 Submit
                               </button>
                               <div className="modal-action">
-                                <button className="btn">Close</button>
+                                <button
+                                  className="btn"
+                                  onClick={() =>
+                                    document
+                                      .getElementById("my_modal_5")
+                                      .close()
+                                  }
+                                >
+                                  Close
+                                </button>
                               </div>
                             </form>
                           </dialog>

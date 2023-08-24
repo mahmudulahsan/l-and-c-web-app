@@ -59,7 +59,6 @@ const WantLoan = () => {
         data: JSON.stringify(tempObj),
       });
       toast.success("Success!");
-      // console.log("success");
     };
     submitWantLoanForm();
   };

@@ -1,4 +1,10 @@
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
@@ -7,6 +13,7 @@ import { db } from "../firebase";
 
 const Profile = () => {
   const { currentUser } = useContext(AuthContext);
+  const [offerAccepted, setOfferAccepted] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [roll, setRoll] = useState("");
@@ -17,69 +24,80 @@ const Profile = () => {
       if (!currentUser.uid) return;
       const userRef = doc(collection(db, "users"), currentUser.uid);
 
-      var docSnap;
+      var docSnap = await getDoc(userRef);
 
-      for (let i = 0; i < 5; i++) {
-        docSnap = await getDoc(userRef);
-        // console.log(i);
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          if (userData.phone) break;
-        }
-      }
-      // console.log(docSnap.data())
       setEmail(docSnap.data().email);
       setName(docSnap.data().displayName);
       setPhone(docSnap.data().phoneNo);
       setRoll(docSnap.data().studentId);
     };
+
     getUserData();
-  }, [currentUser.uid]);
+  }, []);
 
+  const [offers, setOffers] = useState([]);
 
-// const [resumes, setResumes] = useState([]);
-// useEffect(() => {
-//   const fetchData = async () => {
-//     if(currentUser.uid){
+  useEffect(() => {
+    const fetchData = async () => {
+      const loansCollection = collection(db, `users/${currentUser.uid}/offers`);
+      const loansSnapshot = await getDocs(loansCollection);
+      let acceptedStatus = false;
+      const loanData = await Promise.all(
+        loansSnapshot.docs.map(async (e) => {
+          const obj = e.data().data;
+          const parsedObj = JSON.parse(obj);
+          if (parsedObj.status === "accepted") {
+            acceptedStatus = true;
+          }
 
-//       const loansCollection = collection(db, `users/${currentUser.uid}/requests`);
-//       console.log(loansCollection)
-//       const loansSnapshot = await getDocs(loansCollection);
-//       const loanData = loansSnapshot.docs.map((doc) => {
-//         const obj = doc.data().data;
-//         const parsedObj = JSON.parse(obj);
-//         return {
-//           uid: parsedObj.uid,
-//         };
-//       });
-//       //   setLoading(false);
-//       console.log(loanData)
-//       setResumes(loanData);
-//     }
-//   };
-//   fetchData();
-// }, []);
+          const offererRef = doc(collection(db, "users"), parsedObj.offererUid);
+          const offererDoc = await getDoc(offererRef);
+          const offererData = offererDoc.data();
 
-const [requests, setRequests] = useState([])
+          return {
+            id: e.id,
+            requesterUid: parsedObj.requesterUid,
+            offererUid: parsedObj.offererUid,
+            offererEmail: offererData.email,
+            offererPhone: offererData.phoneNo,
+            offererName: offererData.displayName,
+            offererStudentId: offererData.studentId,
+            date: parsedObj.date,
+            interestRate: parsedObj.interestRate,
+            note: parsedObj.note,
+            status: parsedObj.status,
+          };
+        })
+      );
+      setOfferAccepted(acceptedStatus);
+      setOffers(loanData);
+      console.log("offers set", loanData);
+    };
+    fetchData();
+  }, []);
 
-useEffect(() => {
-  const fetchData = async () => {
-    const loansCollection = collection(db, `users/${currentUser.uid}/requests`);
-    const loansSnapshot = await getDocs(loansCollection);
-    const loanData = loansSnapshot.docs.map((doc) => {
-      const obj = doc.data().data;
-      const parsedObj = JSON.parse(obj);
-      return {
-        uid: parsedObj.uid
-      };
-    });
-    //   setLoading(false);
-    setRequests(loanData);
+  const handleAcceptOffer = async (offerId) => {
+    const loansCollection = collection(db, `users/${currentUser.uid}/offers`);
+    // change the status of the offer to accepted
+    const docRef = doc(loansCollection, offerId);
+
+    // Find the offer first
+    const offer = offers.find((elem) => elem.id === offerId);
+
+    if (offer) {
+      // Instead of overwriting the entire document, only update the fields you need to change.
+      await updateDoc(docRef, {
+        ...offer, // Spread all properties of offer (if there are any other properties you want to include)
+        status: "accepted",
+      });
+    } else {
+      console.error("Offer not found!");
+      return;
+    }
+
+    console.log("done");
+    setOfferAccepted(true);
   };
-  fetchData();
-}, [currentUser.uid]);
-
-console.log(requests)
 
   return (
     <div>
@@ -99,22 +117,39 @@ console.log(requests)
           </div>
         </div>
         <div className="flex flex-col">
-          <h1 className="text-3xl">Requests</h1>
-          <div className="card w-96 bg-base-100 shadow-xl image-full">
-            <figure>
-              <img
-                src="https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80"
-                alt="Shoes"
-              />
-            </figure>
-            <div className="card-body">
-              <h2 className="card-title">Shoes!</h2>
-              <p>If a dog chews shoes whose shoes does he choose?</p>
-              <div className="card-actions justify-end">
-                <button className="btn btn-primary">Buy Now</button>
+          <h1 className="text-3xl">Offers</h1>
+          {offers.map((elem) => (
+            <div
+              className="card w-96 bg-base-100 shadow-xl image-full"
+              key={elem.uuid}
+            >
+              <figure>
+                <img
+                  src="https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80"
+                  alt="Shoes"
+                />
+              </figure>
+              <div className="card-body">
+                <h2 className="card-title">{elem.offererName}</h2>
+                <p>Student ID: {elem.offererStudentId}</p>
+                <p>Email: {elem.offererEmail}</p>
+                <p>Phone: {elem.offererPhone}</p>
+                <p>Interest rate: {elem.interestRate}%</p>
+                <p>Return date: {elem.date}</p>
+                {elem.note && <p>Additional Notes: {elem.note}</p>}
+                <div className="card-actions justify-end">
+                  {!offerAccepted && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleAcceptOffer(elem.id)}
+                    >
+                      Accept
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
       <Footer />
